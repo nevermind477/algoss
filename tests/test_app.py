@@ -44,7 +44,7 @@ def test_coins():
 def test_app():
     async def run():
         app = Algoss()
-        async with app.run_test(size=(110, 34)) as pilot:
+        async with app.run_test(size=(110, 45)) as pilot:
             await pilot.press("right")
             await pilot.press("right")
             await pilot.press("space")
@@ -52,9 +52,9 @@ def test_app():
             await pilot.press("space")
             assert not app.playing
 
-            app.query_one("#cat").value = "Поиск"
+            await pilot.click("#cat_search")
             await pilot.pause()
-            assert app.query_one("#algo").value == "Бинарный поиск"
+            assert app.current_algo == "Бинарный поиск"
 
             await pilot.click("#btn_rand")
             await pilot.pause()
@@ -65,9 +65,9 @@ def test_app():
             await pilot.pause()
             assert app.steps == 1
 
-            app.query_one("#cat").value = "Жадные"
+            await pilot.click("#cat_greedy")
             await pilot.pause()
-            assert app.query_one("#algo").value == "Размен монет"
+            assert app.current_algo == "Размен монет"
             await pilot.click("#step")
             assert app.steps == 2
 

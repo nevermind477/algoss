@@ -1,21 +1,21 @@
 import random
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, Footer, Input, Label, Select
+from textual.widgets import Button, Footer, Input, Label, OptionList, Static
 
 from .algorithms import (
     DEFAULT_COINS,
     DEFAULT_SEARCH,
     DEFAULT_SORT,
-    bubble,
-    selection,
-    insertion,
-    quicksort,
-    mergesort,
-    shaker,
     binary_search,
-    linear_search,
+    bubble,
     coin_change,
+    insertion,
+    linear_search,
+    mergesort,
+    quicksort,
+    selection,
+    shaker,
 )
 from .views import Canvas, SpeedBar, StateCard, TraceView
 
@@ -36,6 +36,14 @@ CATEGORIES = {
         "Размен монет",
     ],
 }
+
+LOGO_TEXT = (
+    "┌────────────────────────────────────┐\n"
+    "│  █▀▀█ █    █▀▀█ █▀▀█ █▀▀▀ █▀▀▀     │\n"
+    "│  █▄▄█ █    █ ▄█ █  █ ▀▀▀█ ▀▀▀█     │\n"
+    "│  ▀  ▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀     │\n"
+    "└────────────────────────────────────┘"
+)
 
 
 def parse_ints(raw: str, default: list[int]) -> list[int]:
@@ -62,43 +70,40 @@ class Algoss(App):
         self.timer = None
         self.playing = False
         self.steps = 0
+        self.current_cat = "Сортировки"
+        self.current_algo = "Пузырьковая"
 
     def compose(self) -> ComposeResult:
-        first_cat = next(iter(CATEGORIES))
-        first_algos = CATEGORIES[first_cat]
         with Horizontal(id="body"):
             with Vertical(id="side"):
-                yield Label("┌─ КАТЕГОРИЯ", classes="cap")
-                yield Select(
-                    [(c, c) for c in CATEGORIES],
-                    value=first_cat,
-                    allow_blank=False,
-                    id="cat",
-                )
-                yield Label("┌─ АЛГОРИТМ", classes="cap")
-                yield Select(
-                    [(n, n) for n in first_algos],
-                    value=first_algos[0],
-                    allow_blank=False,
-                    id="algo",
-                )
+                yield Static(LOGO_TEXT, id="logo")
 
-                yield Label("┌─ ПАРАМЕТР 1", id="lbl_p1", classes="cap")
+                yield Label("┌─ КАТЕГОРИЯ", classes="sec_title")
+                with Horizontal(id="cat_bar"):
+                    yield Button("Сортировка", id="cat_sort", classes="cat_btn -active")
+                    yield Button("Поиск", id="cat_search", classes="cat_btn")
+                    yield Button("Жадные", id="cat_greedy", classes="cat_btn")
+
+                yield Label("┌─ ВЫБОР АЛГОРИТМА", classes="sec_title")
+                yield OptionList(*CATEGORIES["Сортировки"], id="algo_list")
+
+                yield Label("┌─ ПАРАМЕТР 1", id="lbl_p1", classes="sec_title")
                 yield Input(", ".join(map(str, DEFAULT_SORT)), id="p1")
 
-                yield Label("┌─ ПАРАМЕТР 2", id="lbl_p2", classes="cap")
+                yield Label("┌─ ПАРАМЕТР 2", id="lbl_p2", classes="sec_title")
                 yield Input("23", id="p2")
 
-                with Horizontal(id="param_buttons"):
+                with Horizontal(id="param_actions"):
                     yield Button("🎲 Случайно", id="btn_rand")
                     yield Button("↵ Применить", id="btn_apply")
 
-                yield Label("┌─ УПРАВЛЕНИЕ", classes="cap")
-                yield Button("▶ Старт", id="play", variant="primary")
-                yield Button("⏭ Шаг", id="step")
-                yield Button("↺ Сброс", id="reset")
+                yield Label("┌─ УПРАВЛЕНИЕ", classes="sec_title")
+                yield Button("▶ Старт", id="play")
+                with Horizontal(id="step_actions"):
+                    yield Button("⏭ Шаг", id="step")
+                    yield Button("↺ Сброс", id="reset")
 
-                yield Label("┌─ СКОРОСТЬ", classes="cap")
+                yield Label("┌─ СКОРОСТЬ", classes="sec_title")
                 yield SpeedBar(50, id="speed")
 
             with Vertical(id="main"):
@@ -113,35 +118,57 @@ class Algoss(App):
         self.update_param_visibility()
         self.load()
 
-    def update_param_visibility(self):
-        cat = self.query_one("#cat", Select).value
-        lbl_p1 = self.query_one("#lbl_p1", Label)
-        inp_p1 = self.query_one("#p1", Input)
-        lbl_p2 = self.query_one("#lbl_p2", Label)
-        inp_p2 = self.query_one("#p2", Input)
-        btn_rand = self.query_one("#btn_rand", Button)
+    def set_category(self, cat: str):
+        if cat == self.current_cat:
+            return
+        self.current_cat = cat
+        for btn in self.query(".cat_btn"):
+            btn.remove_class("-active")
 
         if cat == "Сортировки":
+            self.query_one("#cat_sort", Button).add_class("-active")
+            self.query_one("#p1", Input).value = ", ".join(map(str, DEFAULT_SORT))
+        elif cat == "Поиск":
+            self.query_one("#cat_search", Button).add_class("-active")
+            self.query_one("#p1", Input).value = ", ".join(map(str, DEFAULT_SEARCH))
+            self.query_one("#p2", Input).value = "23"
+        else:
+            self.query_one("#cat_greedy", Button).add_class("-active")
+            self.query_one("#p1", Input).value = "137"
+            self.query_one("#p2", Input).value = ", ".join(map(str, DEFAULT_COINS))
+
+        ol = self.query_one("#algo_list", OptionList)
+        ol.clear_options()
+        algos = CATEGORIES[cat]
+        ol.add_options(algos)
+        ol.highlighted = 0
+        self.current_algo = algos[0]
+        self.update_param_visibility()
+        self.load()
+
+    def update_param_visibility(self):
+        lbl_p1 = self.query_one("#lbl_p1", Label)
+        lbl_p2 = self.query_one("#lbl_p2", Label)
+        inp_p2 = self.query_one("#p2", Input)
+
+        if self.current_cat == "Сортировки":
             lbl_p1.update("┌─ МАССИВ ДЛЯ СОРТИРОВКИ")
             lbl_p2.display = False
             inp_p2.display = False
-            btn_rand.display = True
-        elif cat == "Поиск":
+        elif self.current_cat == "Поиск":
             lbl_p1.update("┌─ МАССИВ ЧИСЕЛ")
             lbl_p2.update("┌─ ИСКОМОЕ ЧИСЛО")
             lbl_p2.display = True
             inp_p2.display = True
-            btn_rand.display = True
         else:
             lbl_p1.update("┌─ СУММА ДЛЯ РАЗМЕНА")
             lbl_p2.update("┌─ НОМИНАЛЫ МОНЕТ")
             lbl_p2.display = True
             inp_p2.display = True
-            btn_rand.display = True
 
     def build_generator(self):
-        cat = self.query_one("#cat", Select).value
-        name = self.query_one("#algo", Select).value
+        cat = self.current_cat
+        name = self.current_algo
         p1 = self.query_one("#p1", Input).value
         p2 = self.query_one("#p2", Input).value
 
@@ -226,27 +253,15 @@ class Algoss(App):
     def action_reset(self):
         self.load()
 
-    def on_select_changed(self, event):
-        if event.select.id == "cat":
-            cat = event.value
-            names = CATEGORIES[cat]
-            algo = self.query_one("#algo", Select)
-            algo.set_options([(n, n) for n in names])
-            algo.value = names[0]
-            if cat == "Сортировки":
-                self.query_one("#p1", Input).value = ", ".join(map(str, DEFAULT_SORT))
-            elif cat == "Поиск":
-                self.query_one("#p1", Input).value = ", ".join(map(str, DEFAULT_SEARCH))
-                self.query_one("#p2", Input).value = "23"
-            else:
-                self.query_one("#p1", Input).value = "137"
-                self.query_one("#p2", Input).value = ", ".join(map(str, DEFAULT_COINS))
-            self.update_param_visibility()
-        self.load()
-
     def on_button_pressed(self, event):
         btn_id = event.button.id
-        if btn_id == "play":
+        if btn_id == "cat_sort":
+            self.set_category("Сортировки")
+        elif btn_id == "cat_search":
+            self.set_category("Поиск")
+        elif btn_id == "cat_greedy":
+            self.set_category("Жадные")
+        elif btn_id == "play":
             self.action_toggle()
         elif btn_id == "step":
             self.action_step()
@@ -255,16 +270,19 @@ class Algoss(App):
         elif btn_id == "btn_rand":
             self.randomize_params()
 
+    def on_option_list_option_selected(self, event):
+        self.current_algo = str(event.option.prompt)
+        self.load()
+
     def on_input_submitted(self, _):
         self.action_reset()
 
     def randomize_params(self):
-        cat = self.query_one("#cat", Select).value
-        if cat == "Сортировки":
+        if self.current_cat == "Сортировки":
             count = random.randint(7, 12)
             vals = [random.randint(1, 30) for _ in range(count)]
             self.query_one("#p1", Input).value = ", ".join(map(str, vals))
-        elif cat == "Поиск":
+        elif self.current_cat == "Поиск":
             count = random.randint(8, 12)
             vals = sorted(random.sample(range(1, 60), count))
             target = random.choice(vals) if random.random() < 0.75 else random.randint(1, 60)
