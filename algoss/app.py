@@ -1,7 +1,7 @@
 import random
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Input
+from textual.widgets import Button, Input, Label
 
 from .algorithms import (
     DEFAULT_COINS,
@@ -22,7 +22,6 @@ from .views import (
     Canvas,
     CategoryBar,
     LogoView,
-    ParamsView,
     StateCard,
     TraceView,
     VimKeymap,
@@ -59,6 +58,7 @@ def parse_ints(raw: str, default: list[int]) -> list[int]:
 class Algoss(App):
     CSS_PATH = "app.tcss"
     TITLE = "algoss"
+    AUTO_FOCUS = None
     BINDINGS = [
         ("space", "toggle", "старт/пауза"),
         ("n", "step", "шаг"),
@@ -139,23 +139,58 @@ class Algoss(App):
                 yield LogoView(id="logo")
                 yield CategoryBar(list(CATEGORIES.keys()), self.current_cat, id="cat_bar")
                 yield AlgoList(CATEGORIES[self.current_cat], self.current_algo, id="algo_list")
-                yield ParamsView(self.current_cat, self.current_p1, self.current_p2, id="params_view")
-                yield Input(self.current_p1, id="input_p1", classes="hidden")
-                yield Input(self.current_p2, id="input_p2", classes="hidden")
                 yield VimKeymap(self.speed, self.playing, id="keymap")
 
             with Vertical(id="main"):
                 yield Canvas(id="canvas")
+
+                with Horizontal(id="numbers_box"):
+                    yield Label("Массив:", id="lbl_p1", classes="cfg_lbl")
+                    yield Input(self.current_p1, id="input_p1", classes="cfg_inp")
+                    yield Label("Искать:", id="lbl_p2", classes="cfg_lbl hidden")
+                    yield Input(self.current_p2, id="input_p2", classes="cfg_inp_sm hidden")
+                    yield Button("🎲 Rand", id="btn_rand", classes="cfg_btn")
+                    yield Button("↵ Применить", id="btn_apply", classes="cfg_btn")
+
                 yield StateCard(id="state")
                 yield TraceView(id="trace")
 
         yield VimStatusBar(id="status_bar")
 
     def on_mount(self):
-        self.query_one("#input_p1", Input).can_focus = False
-        self.query_one("#input_p2", Input).can_focus = False
+        for btn in self.query(Button):
+            btn.FOCUS_ON_CLICK = False
+        box = self.query_one("#numbers_box")
+        box.border_title = " НАСТРОЙКА ЧИСЕЛ [i: фокус, g: rand, Enter: применить] "
+        self.update_numbers_ui()
         self.set_focus(None)
         self.load()
+
+    def update_numbers_ui(self):
+        lbl_p1 = self.query_one("#lbl_p1", Label)
+        inp_p1 = self.query_one("#input_p1", Input)
+        lbl_p2 = self.query_one("#lbl_p2", Label)
+        inp_p2 = self.query_one("#input_p2", Input)
+
+        if self.current_cat == "Сортировки":
+            lbl_p1.update("Массив:")
+            inp_p1.value = self.p1_sort
+            lbl_p2.display = False
+            inp_p2.display = False
+        elif self.current_cat == "Поиск":
+            lbl_p1.update("Массив:")
+            inp_p1.value = self.p1_search
+            lbl_p2.update("Искать:")
+            inp_p2.value = self.p2_search
+            lbl_p2.display = True
+            inp_p2.display = True
+        else:
+            lbl_p1.update("Сумма:")
+            inp_p1.value = self.p1_greedy
+            lbl_p2.update("Монеты:")
+            inp_p2.value = self.p2_greedy
+            lbl_p2.display = True
+            inp_p2.display = True
 
     def set_category(self, cat: str):
         if cat not in CATEGORIES or cat == self.current_cat:
@@ -167,7 +202,7 @@ class Algoss(App):
         algos = CATEGORIES[cat]
         self.current_algo = algos[0]
         self.query_one(AlgoList).set_items(algos, self.current_algo)
-        self.update_params_display()
+        self.update_numbers_ui()
         self.load()
 
     def set_algorithm(self, name: str):
@@ -176,9 +211,6 @@ class Algoss(App):
             self.query_one(AlgoList).current = name
             self.query_one(AlgoList).refresh()
             self.load()
-
-    def update_params_display(self):
-        self.query_one(ParamsView).update_params(self.current_cat, self.current_p1, self.current_p2)
 
     def build_generator(self):
         cat = self.current_cat
@@ -333,51 +365,41 @@ class Algoss(App):
             return
         self.stop_playing()
         self.mode = "INSERT"
-        self.query_one(ParamsView).display = False
-
-        inp1 = self.query_one("#input_p1", Input)
-        inp1.can_focus = True
-        inp1.value = self.current_p1
-        inp1.display = True
-        inp1.focus()
-
-        if self.current_cat in ("Поиск", "Жадные"):
-            inp2 = self.query_one("#input_p2", Input)
-            inp2.can_focus = True
-            inp2.value = self.current_p2
-            inp2.display = True
-        else:
-            self.query_one("#input_p2", Input).display = False
-
+        inp = self.query_one("#input_p1", Input)
+        inp.focus()
         self.update_status()
 
     def action_cancel_edit(self):
         if self.mode != "INSERT":
             return
         self.mode = "NORMAL"
-        inp1 = self.query_one("#input_p1", Input)
-        inp2 = self.query_one("#input_p2", Input)
-        inp1.can_focus = False
-        inp2.can_focus = False
-        inp1.display = False
-        inp2.display = False
-        self.query_one(ParamsView).display = True
-        self.update_status()
+        self.update_numbers_ui()
         self.set_focus(None)
+        self.update_status()
 
-    def on_input_submitted(self, event):
-        inp1 = self.query_one("#input_p1", Input)
-        self.current_p1 = inp1.value
+    def apply_inputs(self):
+        self.current_p1 = self.query_one("#input_p1", Input).value
         if self.current_cat in ("Поиск", "Жадные"):
-            inp2 = self.query_one("#input_p2", Input)
-            self.current_p2 = inp2.value
-        self.action_cancel_edit()
-        self.update_params_display()
+            self.current_p2 = self.query_one("#input_p2", Input).value
+        self.mode = "NORMAL"
+        self.set_focus(None)
         self.load()
 
+    def on_input_submitted(self, _):
+        self.apply_inputs()
+
+    def on_button_pressed(self, event):
+        if event.button.id == "btn_rand":
+            self.action_rand()
+        elif event.button.id == "btn_apply":
+            self.apply_inputs()
+
+    def on_input_changed(self, _):
+        if self.focused and isinstance(self.focused, Input) and self.mode != "INSERT":
+            self.mode = "INSERT"
+            self.update_status()
+
     def action_rand(self):
-        if self.mode == "INSERT":
-            return
         if self.current_cat == "Сортировки":
             count = random.randint(7, 12)
             vals = [random.randint(1, 30) for _ in range(count)]
@@ -392,7 +414,7 @@ class Algoss(App):
             amount = random.randint(25, 240)
             self.p1_greedy = str(amount)
 
-        self.update_params_display()
+        self.update_numbers_ui()
         self.load()
 
     def on_category_bar_selected(self, event):
@@ -400,9 +422,6 @@ class Algoss(App):
 
     def on_algo_list_selected(self, event):
         self.set_algorithm(event.name)
-
-    def on_params_view_edit_requested(self, _):
-        self.action_edit()
 
     def on_vim_keymap_action(self, event):
         act = event.act
@@ -422,6 +441,8 @@ class Algoss(App):
             self.action_edit()
         elif act == "rand":
             self.action_rand()
+        elif act == "quit":
+            self.exit()
 
 
 def main():

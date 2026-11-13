@@ -8,6 +8,16 @@ DARK_GRAY = "#444444"
 DIM = "#222222"
 
 
+def box_top(title: str, width: int) -> str:
+    prefix = f"┌─ {title} " if title else "┌─"
+    fill = max(0, width - len(prefix) - 1)
+    return prefix + ("─" * fill) + "┐\n"
+
+
+def box_bot(width: int) -> str:
+    return "└" + ("─" * max(0, width - 2)) + "┘"
+
+
 class LogoView(Widget):
     def render(self):
         width = max(self.size.width, 24)
@@ -28,9 +38,7 @@ class LogoView(Widget):
             ]
 
         inner = width - 2
-        title = " ALGOSS "
-        fill = max(0, width - len(title) - 4)
-        out.append(f"┌─{title}{'─' * fill}┐\n", style=DARK_GRAY)
+        out.append(box_top("ALGOSS", width), style=DARK_GRAY)
 
         for l in lines:
             if len(l) > inner:
@@ -42,7 +50,7 @@ class LogoView(Widget):
             out.append(row, style=f"bold {WHITE}")
             out.append("│\n", style=DARK_GRAY)
 
-        out.append(f"└{'─' * inner}┘", style=DARK_GRAY)
+        out.append(box_bot(width), style=DARK_GRAY)
         return out
 
 
@@ -76,29 +84,29 @@ class CategoryBar(Widget):
     def render(self):
         width = max(self.size.width, 24)
         out = Text()
-        title = " РЕЖИМ [h/l или 1-3] "
-        fill = max(0, width - len(title) - 4)
-        out.append(f"┌─{title}{'─' * fill}┐\n", style=DARK_GRAY)
+        out.append(box_top("РЕЖИМ [h/l или 1-3]", width), style=DARK_GRAY)
 
-        out.append("│ ", style=DARK_GRAY)
-        used_len = 2
+        inner = width - 2
+        row = Text()
+        row.append(" ")
         for idx, cat in enumerate(self.categories, start=1):
             is_active = (cat == self.current)
-            short_name = "Сорт" if cat == "Сортировки" else cat
-            label = f"{idx}: {short_name}"
+            sname = "Сорт" if cat == "Сортировки" else ("Жадн" if width < 36 and cat == "Жадные" else cat)
             if is_active:
-                out.append(f"[{label}]", style=f"bold #000000 on {WHITE}")
-                used_len += len(label) + 2
+                row.append(f"[{idx}:{sname}]", style=f"bold #000000 on {WHITE}")
             else:
-                out.append(f" {label} ", style=GRAY)
-                used_len += len(label) + 2
-            out.append(" ")
-            used_len += 1
+                row.append(f" {idx}:{sname} ", style=GRAY)
+            row.append(" ")
 
-        rem = max(0, width - 1 - used_len)
-        out.append(" " * rem)
+        if len(row.plain) > inner:
+            row = row[:inner]
+        else:
+            row.append(" " * (inner - len(row.plain)))
+
+        out.append("│", style=DARK_GRAY)
+        out.append_text(row)
         out.append("│\n", style=DARK_GRAY)
-        out.append(f"└{'─' * (width - 2)}┘", style=DARK_GRAY)
+        out.append(box_bot(width), style=DARK_GRAY)
         return out
 
     def on_click(self, event):
@@ -154,9 +162,7 @@ class AlgoList(Widget):
     def render(self):
         width = max(self.size.width, 24)
         out = Text()
-        title = " АЛГОРИТМ [j/k] "
-        fill = max(0, width - len(title) - 4)
-        out.append(f"┌─{title}{'─' * fill}┐\n", style=DARK_GRAY)
+        out.append(box_top("АЛГОРИТМ [j/k]", width), style=DARK_GRAY)
 
         inner = width - 2
         for i, item in enumerate(self.items, start=1):
@@ -172,61 +178,13 @@ class AlgoList(Widget):
                 out.append(padded, style=GRAY)
             out.append("│\n", style=DARK_GRAY)
 
-        out.append(f"└{'─' * inner}┘", style=DARK_GRAY)
+        out.append(box_bot(width), style=DARK_GRAY)
         return out
 
     def on_click(self, event):
         idx = event.offset.y - 1
         if 0 <= idx < len(self.items):
             self.select_index(idx)
-
-
-class ParamsView(Widget):
-    can_focus = False
-
-    class EditRequested(Message):
-        pass
-
-    class RandRequested(Message):
-        pass
-
-    def __init__(self, cat: str, p1: str, p2: str = "", **kwargs):
-        super().__init__(**kwargs)
-        self.cat = cat
-        self.p1 = p1
-        self.p2 = p2
-
-    def update_params(self, cat: str, p1: str, p2: str = ""):
-        self.cat = cat
-        self.p1 = p1
-        self.p2 = p2
-        self.refresh()
-
-    def render(self):
-        width = max(self.size.width, 24)
-        inner = width - 2
-        out = Text()
-        title = " ПАРАМЕТРЫ [i: правка, g: rand] "
-        fill = max(0, width - len(title) - 4)
-        out.append(f"┌─{title}{'─' * fill}┐\n", style=DARK_GRAY)
-
-        if self.cat == "Сортировки":
-            line = f" Массив: [{self.p1}]"
-        elif self.cat == "Поиск":
-            line = f" Массив: [{self.p1}] | Цель: {self.p2}"
-        else:
-            line = f" Сумма: {self.p1} | Монеты: [{self.p2}]"
-
-        padded = f"{line:<{inner}}"[:inner]
-        out.append("│", style=DARK_GRAY)
-        out.append(padded, style=f"bold {WHITE}")
-        out.append("│\n", style=DARK_GRAY)
-
-        out.append(f"└{'─' * inner}┘", style=DARK_GRAY)
-        return out
-
-    def on_click(self, event):
-        self.post_message(self.EditRequested())
 
 
 class VimKeymap(Widget):
@@ -251,16 +209,19 @@ class VimKeymap(Widget):
         width = max(self.size.width, 24)
         inner = width - 2
         out = Text()
-        title = " УПРАВЛЕНИЕ [VIM] "
-        fill = max(0, width - len(title) - 4)
-        out.append(f"┌─{title}{'─' * fill}┐\n", style=DARK_GRAY)
+        out.append(box_top("УПРАВЛЕНИЕ [VIM]", width), style=DARK_GRAY)
 
         play_label = "пауза" if self.playing else "старт"
         lines = [
-            f"<space>  {play_label:<12} n    шаг",
-            "j / k    алгоритм      r    сброс",
-            "h / l    режим (1-3)   q    выход",
-            f"i / g    правка/rand  -/+   скорость: {self.speed}%",
+            f"<space>  {play_label}",
+            "n        шаг вперед",
+            "r        сброс к началу",
+            "j / k    выбор алгоритма",
+            "h / l    смена режима (1-3)",
+            "i        настройка чисел",
+            "g        случайные числа",
+            f"- / +    скорость: {self.speed}%",
+            "q        выход",
         ]
 
         for l in lines:
@@ -269,31 +230,25 @@ class VimKeymap(Widget):
             out.append(padded, style=GRAY)
             out.append("│\n", style=DARK_GRAY)
 
-        out.append(f"└{'─' * inner}┘", style=DARK_GRAY)
+        out.append(box_bot(width), style=DARK_GRAY)
         return out
 
     def on_click(self, event):
         y = event.offset.y
-        if y == 1:
-            if event.offset.x < 18:
-                self.post_message(self.Action("toggle"))
-            else:
-                self.post_message(self.Action("step"))
-        elif y == 2:
-            if event.offset.x < 18:
-                self.post_message(self.Action("next_algo"))
-            else:
-                self.post_message(self.Action("next_cat"))
-        elif y == 3:
-            if event.offset.x < 18:
-                self.post_message(self.Action("reset"))
-            else:
-                self.post_message(self.Action("speed_up"))
-        elif y == 4:
-            if event.offset.x < 18:
-                self.post_message(self.Action("edit"))
-            else:
-                self.post_message(self.Action("rand"))
+        actions = [
+            "toggle",
+            "step",
+            "reset",
+            "next_algo",
+            "next_cat",
+            "edit",
+            "rand",
+            "speed_up",
+            "quit",
+        ]
+        idx = y - 1
+        if 0 <= idx < len(actions):
+            self.post_message(self.Action(actions[idx]))
 
 
 class VimStatusBar(Widget):
@@ -325,7 +280,7 @@ class VimStatusBar(Widget):
             out.append(" NORMAL ", style=f"bold #000000 on {WHITE}")
             out.append(f" {self.cat} ▸ {self.algo} │ шаг {self.step_num}   ", style=f"{WHITE} on {DARK_GRAY}")
 
-        hint = " <space> старт  n шаг  r сброс  i правка  g rand  q выход "
+        hint = " <space> старт  n шаг  r сброс  i ввод  g rand  q выход "
         used = len(out.plain)
         rem = max(0, width - used - len(hint))
         out.append(" " * rem, style=f"on {DARK_GRAY}")
@@ -345,14 +300,11 @@ class Canvas(Widget):
     def render(self):
         width = max(self.size.width, 20)
         out = Text()
-
-        title = " ВИЗУАЛИЗАЦИЯ "
-        fill_len = max(0, width - len(title) - 4)
-        out.append(f"┌─{title}{'─' * fill_len}┐\n", style=DARK_GRAY)
+        out.append(box_top("ВИЗУАЛИЗАЦИЯ", width), style=DARK_GRAY)
 
         if not self.step or not self.step.array:
             out.append(f"│{'ожидание данных':^{width - 2}}│\n", style=DARK_GRAY)
-            out.append(f"└{'─' * (width - 2)}┘", style=DARK_GRAY)
+            out.append(box_bot(width), style=DARK_GRAY)
             return out
 
         values = self.step.array
@@ -417,7 +369,7 @@ class Canvas(Widget):
         out.append(" " * pad_right)
         out.append("│\n", style=DARK_GRAY)
 
-        out.append(f"└{'─' * (width - 2)}┘", style=DARK_GRAY)
+        out.append(box_bot(width), style=DARK_GRAY)
         return out
 
 
@@ -441,10 +393,7 @@ class TraceView(Widget):
         width = max(self.size.width, 20)
         height = max(self.size.height, 4)
         out = Text()
-
-        title = " ЖУРНАЛ ШАГОВ "
-        fill_len = max(0, width - len(title) - 4)
-        out.append(f"┌─{title}{'─' * fill_len}┐\n", style=DARK_GRAY)
+        out.append(box_top("ЖУРНАЛ ШАГОВ", width), style=DARK_GRAY)
 
         visible_rows = height - 2
         items = self.history[-visible_rows:] if self.history else []
@@ -467,7 +416,7 @@ class TraceView(Widget):
             out.append(tail)
             out.append("│\n", style=DARK_GRAY)
 
-        out.append(f"└{'─' * (width - 2)}┘", style=DARK_GRAY)
+        out.append(box_bot(width), style=DARK_GRAY)
         return out
 
 
@@ -485,17 +434,14 @@ class StateCard(Widget):
     def render(self):
         width = max(self.size.width, 20)
         out = Text()
-
-        title = " ТЕКУЩЕЕ ДЕЙСТВИЕ И ПЕРЕМЕННЫЕ "
-        fill_len = max(0, width - len(title) - 4)
-        out.append(f"┌─{title}{'─' * fill_len}┐\n", style=DARK_GRAY)
+        out.append(box_top("ТЕКУЩЕЕ ДЕЙСТВИЕ И ПЕРЕМЕННЫЕ", width), style=DARK_GRAY)
 
         inner_w = width - 2
         if not self.step:
             msg = " Ожидание запуска алгоритма..."
             out.append(f"│{msg:<{inner_w}}│\n", style=DARK_GRAY)
             out.append(f"│{' ' * inner_w}│\n", style=DARK_GRAY)
-            out.append(f"└{'─' * (width - 2)}┘", style=DARK_GRAY)
+            out.append(box_bot(width), style=DARK_GRAY)
             return out
 
         msg = f" Шаг {self.step_num}: {self.step.message}"
@@ -517,5 +463,5 @@ class StateCard(Widget):
         out.append(tail_vars)
         out.append("│\n", style=DARK_GRAY)
 
-        out.append(f"└{'─' * (width - 2)}┘", style=DARK_GRAY)
+        out.append(box_bot(width), style=DARK_GRAY)
         return out

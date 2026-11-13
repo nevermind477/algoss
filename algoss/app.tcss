@@ -10,7 +10,7 @@ Screen {
 }
 
 #side {
-    width: 42;
+    width: 38;
     height: 100%;
     padding: 0 1;
     background: #080808;
@@ -47,52 +47,81 @@ Screen {
     margin-bottom: 1;
 }
 
-#params_view {
+#keymap {
     width: 100%;
-    height: 3;
+    height: 11;
     margin-bottom: 1;
 }
 
-#input_p1 {
+#canvas {
+    height: 1fr;
+    min-height: 9;
     width: 100%;
-    height: 3;
-    background: #111111;
-    border: tall #ffffff;
-    color: #ffffff;
-    margin-bottom: 1;
+    margin-top: 0;
 }
 
-#input_p2 {
-    width: 100%;
+#numbers_box {
     height: 3;
-    background: #111111;
-    border: tall #888888;
+    width: 100%;
+    border: solid #444444;
+    background: #0a0a0a;
+    padding: 0 1;
+    margin-top: 1;
+}
+
+.cfg_lbl {
+    height: 1;
+    color: #888888;
+    text-style: bold;
+    margin-right: 1;
+}
+
+.cfg_inp {
+    height: 1;
+    border: none;
+    background: #161616;
     color: #ffffff;
-    margin-bottom: 1;
+    padding: 0 1;
+    width: 1fr;
+}
+
+.cfg_inp:focus {
+    background: #282828;
+    color: #ffffff;
+    text-style: bold;
+}
+
+.cfg_inp_sm {
+    height: 1;
+    border: none;
+    background: #161616;
+    color: #ffffff;
+    padding: 0 1;
+    width: 12;
+}
+
+.cfg_inp_sm:focus {
+    background: #282828;
+    color: #ffffff;
+    text-style: bold;
+}
+
+.cfg_btn {
+    height: 1;
+    min-width: 7;
+    border: none;
+    background: #222222;
+    color: #cccccc;
+    margin-left: 1;
+}
+
+.cfg_btn:hover {
+    background: #ffffff;
+    color: #000000;
 }
 
 .hidden {
     display: none;
-}
-
-#keymap {
-    width: 100%;
-    height: 6;
-    margin-bottom: 1;
-}
-
-#status_bar {
-    width: 100%;
-    height: 1;
-    background: #222222;
-    color: #ffffff;
-}
-
-#canvas {
-    height: 50%;
-    min-height: 11;
-    width: 100%;
-    margin-top: 0;
 }
 
 #state {
@@ -102,9 +131,15 @@ Screen {
 }
 
 #trace {
-    height: 1fr;
-    min-height: 5;
+    height: 5;
     width: 100%;
     margin-top: 1;
     margin-bottom: 1;
+}
+
+#status_bar {
+    width: 100%;
+    height: 1;
+    background: #222222;
+    color: #ffffff;
 }
