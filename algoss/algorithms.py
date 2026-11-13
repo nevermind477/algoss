@@ -100,9 +100,152 @@ class Program:
     code: list[str] = field(default_factory=list)
 
 
+IF_CODE = [
+    "for i in range(len(data)):",
+    "    x = data[i]",
+    "    if x % 2 == 0:",
+    "        evens += 1",
+    "    else:",
+    "        odds += 1",
+]
+
+WHILE_CODE = [
+    "n = 7",
+    "steps = 0",
+    "while n != 1:",
+    "    if n % 2 == 0:",
+    "        n = n // 2",
+    "    else:",
+    "        n = 3 * n + 1",
+    "    steps += 1",
+]
+
+IF_DATA = [4, 7, 2, 9, 6, 3, 8]
+
+
+def for_if(data=IF_DATA):
+    evens = 0
+    odds = 0
+    yield Step(list(data), (), (), 0, "Заходим в цикл", {"i": "—", "evens": 0, "odds": 0})
+    for i in range(len(data)):
+        x = data[i]
+        yield Step(
+            list(data),
+            (i,),
+            (),
+            1,
+            f"x = data[{i}] = {x}",
+            {"i": i, "x": x, "evens": evens, "odds": odds},
+        )
+        if x % 2 == 0:
+            yield Step(
+                list(data),
+                (i,),
+                (),
+                2,
+                f"{x} чётное, условие истинно",
+                {"i": i, "x": x, "evens": evens, "odds": odds},
+            )
+            evens += 1
+            yield Step(
+                list(data),
+                (i,),
+                (),
+                3,
+                f"evens = {evens}",
+                {"i": i, "x": x, "evens": evens, "odds": odds},
+            )
+        else:
+            yield Step(
+                list(data),
+                (i,),
+                (),
+                4,
+                f"{x} нечётное, идём в else",
+                {"i": i, "x": x, "evens": evens, "odds": odds},
+            )
+            odds += 1
+            yield Step(
+                list(data),
+                (i,),
+                (),
+                5,
+                f"odds = {odds}",
+                {"i": i, "x": x, "evens": evens, "odds": odds},
+            )
+    yield Step(
+        list(data),
+        (),
+        tuple(range(len(data))),
+        0,
+        f"Чётных {evens}, нечётных {odds}",
+        {"evens": evens, "odds": odds},
+    )
+
+
+def collatz(start=7):
+    n = start
+    steps = 0
+    seen = [n]
+    yield Step(seen[:], (0,), (), 0, f"n = {n}", {"n": n, "steps": steps})
+    while n != 1:
+        yield Step(
+            seen[:],
+            (len(seen) - 1,),
+            (),
+            2,
+            f"n = {n}, условие цикла истинно",
+            {"n": n, "steps": steps},
+        )
+        if n % 2 == 0:
+            yield Step(
+                seen[:],
+                (len(seen) - 1,),
+                (),
+                3,
+                f"{n} чётное",
+                {"n": n, "steps": steps},
+            )
+            n = n // 2
+            line = 4
+        else:
+            yield Step(
+                seen[:],
+                (len(seen) - 1,),
+                (),
+                6,
+                f"{n} нечётное",
+                {"n": n, "steps": steps},
+            )
+            n = 3 * n + 1
+            line = 6
+        steps += 1
+        seen.append(n)
+        yield Step(
+            seen[:],
+            (len(seen) - 1,),
+            (),
+            line,
+            f"n = {n}, steps = {steps}",
+            {"n": n, "steps": steps},
+        )
+    yield Step(
+        seen[:],
+        (),
+        tuple(range(len(seen) - 1)),
+        2,
+        f"Дошли до 1 за {steps} шагов",
+        {"n": 1, "steps": steps},
+    )
+
+
 PROGRAMS = {
     "Сортировки": {
         "Пузырьковая": Program(lambda: bubble(DATA)),
         "Выбором": Program(lambda: selection(DATA)),
+    },
+    "Основы": {
+        "Цикл for и if/else": Program(lambda: for_if(), IF_CODE),
+        "Цикл while": Program(lambda: collatz(), WHILE_CODE),
     },
 }

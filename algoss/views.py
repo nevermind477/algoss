@@ -54,8 +54,13 @@ class Canvas(Widget):
     def paint_code(self):
         out = Text()
         for i, value in enumerate(self.step.array):
-            style = f"bold {ACCENT}" if i in self.step.active else DIM
-            out.append(f"{value:^4}", style=style)
+            if i in self.step.active:
+                style = f"bold {ACCENT}"
+            elif i in self.step.done:
+                style = OK
+            else:
+                style = DIM
+            out.append(f"{value:^3}", style=style)
         out.append("\n\n")
         for n, line in enumerate(self.code):
             if n == self.step.line:
