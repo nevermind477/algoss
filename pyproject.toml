@@ -5,7 +5,7 @@ description = "Пошаговый визуализатор алгоритмов 
 requires-python = ">=3.10"
 dependencies = ["textual>=8.2"]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = ["pytest>=8"]
 
 [project.scripts]
