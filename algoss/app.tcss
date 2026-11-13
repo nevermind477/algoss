@@ -37,6 +37,10 @@ Screen {
     width: 1fr;
 }
 
+#speed:focus {
+    background: #1d2430;
+}
+
 #canvas {
     height: 1fr;
     padding: 1 2;

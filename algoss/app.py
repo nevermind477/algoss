@@ -23,6 +23,7 @@ class Algoss(App):
         self.code: list[str] = []
         self.timer = None
         self.playing = False
+        self.steps = 0
 
     def compose(self) -> ComposeResult:
         category = next(iter(PROGRAMS))
@@ -56,7 +57,7 @@ class Algoss(App):
 
     def on_mount(self):
         for button in self.query(Button):
-            button.focus_on_click = False
+            button.FOCUS_ON_CLICK = False
         self.load()
 
     def load(self):
@@ -66,9 +67,11 @@ class Algoss(App):
         program = PROGRAMS[category][name]
         self.gen = program.run()
         self.code = program.code
+        self.steps = 0
         self.query_one("#info", Static).update("")
         self.query_one(Canvas).show(None)
         self.advance()
+        self.set_focus(None)
 
     def advance(self):
         if self.gen is None:
@@ -79,8 +82,10 @@ class Algoss(App):
             self.gen = None
             self.stop_playing()
             return
+        self.steps += 1
         self.query_one(Canvas).show(step, self.code)
         info = Text(step.message, style="bold")
+        info.append(f"   шаг {self.steps}", style="grey50")
         if step.vars:
             line = "   ".join(f"{k}={v}" for k, v in step.vars.items())
             info.append(f"\n{line}", style="grey62")
