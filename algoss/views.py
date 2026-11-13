@@ -30,6 +30,7 @@ class Canvas(Widget):
         values = self.step.array
         if not values:
             return Text("")
+        slot = max(2, min(4, self.size.width // len(values)))
         top = max(values)
         height = max(self.size.height - 2, 1)
         out = Text()
@@ -42,13 +43,13 @@ class Canvas(Widget):
                         style = f"bold {ACCENT}"
                     elif i in self.step.done:
                         style = OK
-                    out.append(" ██ ", style=style)
+                    out.append("██".center(slot), style=style)
                 else:
-                    out.append("    ")
+                    out.append(" " * slot)
             out.append("\n")
         for i in range(len(values)):
             style = f"bold {ACCENT}" if i in self.step.active else DIM
-            out.append(f"{i:^4}", style=style)
+            out.append(f"{i:^{slot}}", style=style)
         return out
 
     def paint_code(self):

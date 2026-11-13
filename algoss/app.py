@@ -44,7 +44,6 @@ class Algoss(App):
                     allow_blank=False,
                     id="algo",
                 )
-                yield Label("управление", classes="cap")
                 yield Button("старт", id="play", variant="primary")
                 yield Button("шаг", id="step")
                 yield Button("сброс", id="reset")
