@@ -239,6 +239,46 @@ def collatz(start=7):
     )
 
 
+def coins(amount=137, nominal=(50, 25, 10, 5, 2, 1)):
+    chosen = []
+    rest = amount
+    for coin in nominal:
+        yield Step(
+            chosen[:],
+            (),
+            (),
+            message=f"Проверяем {coin}, остаток {rest}",
+            vars={
+                "монета": coin,
+                "остаток": rest,
+                "сумма": amount - rest,
+                "монет": len(chosen),
+            },
+        )
+        while rest >= coin:
+            rest -= coin
+            chosen.append(coin)
+            yield Step(
+                chosen[:],
+                (len(chosen) - 1,),
+                (),
+                message=f"Берём {coin}, остаток {rest}",
+                vars={
+                    "монета": coin,
+                    "остаток": rest,
+                    "сумма": amount - rest,
+                    "монет": len(chosen),
+                },
+            )
+    yield Step(
+        chosen[:],
+        (),
+        tuple(range(len(chosen))),
+        message=f"Готово: {sum(chosen)} из {amount}",
+        vars={"монет": len(chosen), "сумма": sum(chosen)},
+    )
+
+
 PROGRAMS = {
     "Сортировки": {
         "Пузырьковая": Program(lambda: bubble(DATA)),
@@ -247,5 +287,8 @@ PROGRAMS = {
     "Основы": {
         "Цикл for и if/else": Program(lambda: for_if(), IF_CODE),
         "Цикл while": Program(lambda: collatz(), WHILE_CODE),
+    },
+    "Жадные": {
+        "Размен монетами": Program(lambda: coins()),
     },
 }
