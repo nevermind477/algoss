@@ -111,12 +111,12 @@ class CategoryBar(Widget):
 
     def on_click(self, event):
         x = event.offset.x
-        if x < 15:
-            self.set_current(self.categories[0])
-        elif x < 26 and len(self.categories) > 1:
-            self.set_current(self.categories[1])
-        elif len(self.categories) > 2:
-            self.set_current(self.categories[2])
+        n = len(self.categories)
+        if n == 0:
+            return
+        zone_width = max(1, (self.size.width - 2) // n)
+        idx = min(max(0, (x - 1) // zone_width), n - 1)
+        self.set_current(self.categories[idx])
 
 
 class AlgoList(Widget):
@@ -217,7 +217,7 @@ class VimKeymap(Widget):
             "n        шаг вперед",
             "r        сброс к началу",
             "j / k    выбор алгоритма",
-            "h / l    смена режима (1-3)",
+            "h / l    смена режима (1-4)",
             "i        настройка чисел",
             "g        случайные числа",
             f"- / +    скорость: {self.speed}%",

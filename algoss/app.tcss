@@ -10,7 +10,7 @@ Screen {
 }
 
 #side {
-    width: 38;
+    width: 40;
     height: 100%;
     padding: 0 1;
     background: #080808;

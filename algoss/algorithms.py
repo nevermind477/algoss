@@ -1,7 +1,9 @@
-from typing import Callable, Iterator
+from typing import Iterator
 from .steps import Step
 
 DEFAULT_SORT = [14, 5, 22, 3, 11, 18, 8, 2, 9]
+DEFAULT_TWO_POINTERS = [2, 4, 7, 11, 15, 19, 24, 30]
+DEFAULT_PREFIX = [3, 2, 5, 1, 4, 3, 6, 2]
 DEFAULT_SEARCH = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91]
 DEFAULT_COINS = [50, 25, 10, 5, 2, 1]
 
@@ -162,226 +164,106 @@ def insertion(values: list[int]) -> Iterator[Step]:
     yield Step(a[:], (), tuple(range(n)), message="Массив полностью отсортирован", vars={"сравнений": comps, "сдвигов": shifts})
 
 
-def quicksort(values: list[int]) -> Iterator[Step]:
-    a = list(values)
+def two_pointers(values: list[int], target: int) -> Iterator[Step]:
+    a = sorted(values)
     n = len(a)
-    done: set[int] = set()
-    comps = 0
-    swaps = 0
-
-    def qsort(low: int, high: int):
-        nonlocal comps, swaps
-        if low > high:
-            return
-        if low == high:
-            done.add(low)
-            yield Step(a[:], (low,), tuple(sorted(done)), message=f"Элемент {a[low]} на месте", vars={"сравнений": comps, "обменов": swaps})
-            return
-
-        pivot = a[high]
-        yield Step(
-            a[:],
-            (high,),
-            tuple(sorted(done)),
-            pointers={"L": low, "R": high, "P": high},
-            message=f"Опорный элемент A[{high}] = {pivot}",
-            vars={"low": low, "high": high, "pivot": pivot, "сравнений": comps, "обменов": swaps},
-        )
-
-        i = low
-        for j in range(low, high):
-            comps += 1
-            yield Step(
-                a[:],
-                (j, high),
-                tuple(sorted(done)),
-                pointers={"i": i, "j": j, "P": high},
-                message=f"Сравнение A[{j}]={a[j]} с опорным {pivot}",
-                vars={"i": i, "j": j, "pivot": pivot, "сравнений": comps, "обменов": swaps},
-            )
-            if a[j] < pivot:
-                if i != j:
-                    a[i], a[j] = a[j], a[i]
-                    swaps += 1
-                    yield Step(
-                        a[:],
-                        (i, j),
-                        tuple(sorted(done)),
-                        pointers={"i": i, "j": j, "P": high},
-                        message=f"Обмен A[{i}] ⇄ A[{j}]: {a[j]} и {a[i]}",
-                        vars={"i": i, "j": j, "сравнений": comps, "обменов": swaps},
-                    )
-                i += 1
-
-        if i != high:
-            a[i], a[high] = a[high], a[i]
-            swaps += 1
-            yield Step(
-                a[:],
-                (i, high),
-                tuple(sorted(done)),
-                pointers={"P": i},
-                message=f"Ставим опорный {pivot} на итоговую позицию {i}",
-                vars={"сравнений": comps, "обменов": swaps},
-            )
-
-        done.add(i)
-        yield Step(
-            a[:],
-            (),
-            tuple(sorted(done)),
-            pointers={"P": i},
-            message=f"Опорный {pivot} зафиксирован на позиции {i}",
-            vars={"сравнений": comps, "обменов": swaps},
-        )
-
-        yield from qsort(low, i - 1)
-        yield from qsort(i + 1, high)
-
-    yield Step(a[:], (), (), message="Начало быстрой сортировки", vars={"сравнений": 0, "обменов": 0})
-    yield from qsort(0, n - 1)
-    yield Step(a[:], (), tuple(range(n)), message="Массив полностью отсортирован", vars={"сравнений": comps, "обменов": swaps})
-
-
-def mergesort(values: list[int]) -> Iterator[Step]:
-    a = list(values)
-    n = len(a)
-    comps = 0
-
-    def msort(left: int, right: int):
-        nonlocal comps
-        if left >= right:
-            return
-        mid = (left + right) // 2
-        yield Step(
-            a[:],
-            (mid,),
-            (),
-            pointers={"L": left, "M": mid, "R": right},
-            message=f"Деление отрезка [{left}..{right}] на [{left}..{mid}] и [{mid + 1}..{right}]",
-            vars={"left": left, "mid": mid, "right": right, "сравнений": comps},
-        )
-        yield from msort(left, mid)
-        yield from msort(mid + 1, right)
-
-        merged = []
-        i, j = left, mid + 1
-        yield Step(
-            a[:],
-            tuple(range(left, right + 1)),
-            (),
-            pointers={"i": i, "j": j},
-            message=f"Слияние подмассивов [{left}..{mid}] и [{mid + 1}..{right}]",
-            vars={"i": i, "j": j, "сравнений": comps},
-        )
-
-        while i <= mid and j <= right:
-            comps += 1
-            yield Step(
-                a[:],
-                (i, j),
-                (),
-                pointers={"i": i, "j": j},
-                message=f"Сравнение A[{i}]={a[i]} и A[{j}]={a[j]}",
-                vars={"i": i, "j": j, "сравнений": comps},
-            )
-            if a[i] <= a[j]:
-                merged.append(a[i])
-                i += 1
-            else:
-                merged.append(a[j])
-                j += 1
-
-        while i <= mid:
-            merged.append(a[i])
-            i += 1
-        while j <= right:
-            merged.append(a[j])
-            j += 1
-
-        for idx, val in enumerate(merged):
-            a[left + idx] = val
-            yield Step(
-                a[:],
-                (left + idx,),
-                (),
-                pointers={"pos": left + idx},
-                message=f"Запись в основной массив: A[{left + idx}] = {val}",
-                vars={"left": left, "right": right, "сравнений": comps},
-            )
-
-    yield Step(a[:], (), (), message="Начало сортировки слиянием", vars={"сравнений": 0})
-    yield from msort(0, n - 1)
-    yield Step(a[:], (), tuple(range(n)), message="Массив полностью отсортирован", vars={"сравнений": comps})
-
-
-def shaker(values: list[int]) -> Iterator[Step]:
-    a = list(values)
-    n = len(a)
-    comps = 0
-    swaps = 0
+    if n == 0:
+        return
     left = 0
     right = n - 1
-    done: set[int] = set()
-    yield Step(a[:], (), (), message="Начало шейкерной сортировки", vars={"сравнений": 0, "обменов": 0})
+    yield Step(
+        a[:],
+        (left, right),
+        (),
+        pointers={"L": left, "R": right},
+        message=f"Два указателя: поиск пары с суммой {target}",
+        vars={"L": left, "R": right, "цель": target},
+    )
     while left < right:
-        swapped = False
-        for i in range(left, right):
-            comps += 1
+        curr_sum = a[left] + a[right]
+        yield Step(
+            a[:],
+            (left, right),
+            (),
+            pointers={"L": left, "R": right},
+            message=f"Сумма A[{left}]({a[left]}) + A[{right}]({a[right]}) = {curr_sum} (цель {target})",
+            vars={"L": left, "R": right, "A[L]": a[left], "A[R]": a[right], "сумма": curr_sum, "цель": target},
+        )
+        if curr_sum == target:
             yield Step(
                 a[:],
-                (i, i + 1),
-                tuple(sorted(done)),
-                pointers={"i": i},
-                message=f"Проход вправо: сравнение A[{i}]={a[i]} и A[{i + 1}]={a[i + 1]}",
-                vars={"направление": "вправо", "сравнений": comps, "обменов": swaps},
+                (),
+                (left, right),
+                pointers={"L": left, "R": right},
+                message=f"Пара найдена: {a[left]} + {a[right]} = {target} на индексах {left} и {right}!",
+                vars={"L": left, "R": right, "сумма": curr_sum, "найдено": True},
             )
-            if a[i] > a[i + 1]:
-                a[i], a[i + 1] = a[i + 1], a[i]
-                swaps += 1
-                swapped = True
-                yield Step(
-                    a[:],
-                    (i, i + 1),
-                    tuple(sorted(done)),
-                    pointers={"i": i},
-                    message=f"Обмен: {a[i + 1]} ⇄ {a[i]}",
-                    vars={"направление": "вправо", "сравнений": comps, "обменов": swaps},
-                )
-        done.add(right)
-        right -= 1
-        if not swapped:
-            break
-
-        swapped = False
-        for i in range(right, left, -1):
-            comps += 1
+            return
+        elif curr_sum < target:
             yield Step(
                 a[:],
-                (i - 1, i),
-                tuple(sorted(done)),
-                pointers={"i": i},
-                message=f"Проход влево: сравнение A[{i - 1}]={a[i - 1]} и A[{i}]={a[i]}",
-                vars={"направление": "влево", "сравнений": comps, "обменов": swaps},
+                (left,),
+                (),
+                pointers={"L": left, "R": right},
+                message=f"{curr_sum} < {target} (сумма мала) → сдвигаем L вправо",
+                vars={"L": left + 1, "R": right, "цель": target},
             )
-            if a[i - 1] > a[i]:
-                a[i - 1], a[i] = a[i], a[i - 1]
-                swaps += 1
-                swapped = True
-                yield Step(
-                    a[:],
-                    (i - 1, i),
-                    tuple(sorted(done)),
-                    pointers={"i": i},
-                    message=f"Обмен: {a[i]} ⇄ {a[i - 1]}",
-                    vars={"направление": "влево", "сравнений": comps, "обменов": swaps},
-                )
-        done.add(left)
-        left += 1
-        if not swapped:
-            break
+            left += 1
+        else:
+            yield Step(
+                a[:],
+                (right,),
+                (),
+                pointers={"L": left, "R": right},
+                message=f"{curr_sum} > {target} (сумма велика) → сдвигаем R влево",
+                vars={"L": left, "R": right - 1, "цель": target},
+            )
+            right -= 1
 
-    yield Step(a[:], (), tuple(range(n)), message="Массив полностью отсортирован", vars={"сравнений": comps, "обменов": swaps})
+    yield Step(
+        a[:],
+        (),
+        (),
+        message=f"Пара с суммой {target} не найдена",
+        vars={"цель": target, "найдено": False},
+    )
+
+
+def prefix_sums(values: list[int], query_range: str = "2 5") -> Iterator[Step]:
+    a = list(values)
+    n = len(a)
+    if n == 0:
+        return
+    p = [0] * n
+    yield Step(a[:], (), (), message=f"Исходный массив A: {a}", vars={"длина": n})
+    running = 0
+    for i in range(n):
+        prev = running
+        running += a[i]
+        p[i] = running
+        yield Step(
+            p[:],
+            (i,),
+            tuple(range(i)),
+            pointers={"i": i},
+            message=f"P[{i}] = {prev} + A[{i}]({a[i]}) = {running}",
+            vars={"i": i, "A[i]": a[i], "P[i]": running},
+        )
+
+    parts = [int(x) for x in query_range.replace(",", " ").split() if x.strip()]
+    ql = max(0, min(parts[0] if len(parts) > 0 else 1, n - 1))
+    qr = max(ql, min(parts[1] if len(parts) > 1 else max(1, n - 2), n - 1))
+
+    ans = p[qr] - (p[ql - 1] if ql > 0 else 0)
+    prev_str = f"P[{ql - 1}]({p[ql - 1]})" if ql > 0 else "0"
+    yield Step(
+        p[:],
+        tuple(range(ql, qr + 1)),
+        tuple(range(n)),
+        pointers={"L": ql, "R": qr},
+        message=f"Запрос суммы [{ql}..{qr}]: P[{qr}]({p[qr]}) - {prev_str} = {ans}",
+        vars={"L": ql, "R": qr, "P[R]": p[qr], "сумма": ans},
+    )
 
 
 def binary_search(values: list[int], target: int) -> Iterator[Step]:

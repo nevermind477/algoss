@@ -5,17 +5,18 @@ from textual.widgets import Button, Input, Label
 
 from .algorithms import (
     DEFAULT_COINS,
+    DEFAULT_PREFIX,
     DEFAULT_SEARCH,
     DEFAULT_SORT,
+    DEFAULT_TWO_POINTERS,
     binary_search,
     bubble,
     coin_change,
     insertion,
     linear_search,
-    mergesort,
-    quicksort,
+    prefix_sums,
     selection,
-    shaker,
+    two_pointers,
 )
 from .views import (
     AlgoList,
@@ -33,9 +34,10 @@ CATEGORIES = {
         "Пузырьковая",
         "Выбором",
         "Вставками",
-        "Быстрая (Quick)",
-        "Слиянием (Merge)",
-        "Шейкерная (Cocktail)",
+    ],
+    "Массивы": [
+        "Два указателя",
+        "Префиксные суммы",
     ],
     "Поиск": [
         "Бинарный поиск",
@@ -74,6 +76,7 @@ class Algoss(App):
         ("1", "cat_1", "режим 1"),
         ("2", "cat_2", "режим 2"),
         ("3", "cat_3", "режим 3"),
+        ("4", "cat_4", "режим 4"),
         ("i", "edit", "редактировать"),
         ("e", "edit", "редактировать"),
         ("g", "rand", "случайные"),
@@ -98,6 +101,8 @@ class Algoss(App):
         self.current_algo = "Пузырьковая"
 
         self.p1_sort = ", ".join(map(str, DEFAULT_SORT))
+        self.p1_arrays = ", ".join(map(str, DEFAULT_TWO_POINTERS))
+        self.p2_arrays = "26"
         self.p1_search = ", ".join(map(str, DEFAULT_SEARCH))
         self.p2_search = "23"
         self.p1_greedy = "137"
@@ -107,6 +112,8 @@ class Algoss(App):
     def current_p1(self) -> str:
         if self.current_cat == "Сортировки":
             return self.p1_sort
+        elif self.current_cat == "Массивы":
+            return self.p1_arrays
         elif self.current_cat == "Поиск":
             return self.p1_search
         return self.p1_greedy
@@ -115,6 +122,8 @@ class Algoss(App):
     def current_p1(self, val: str):
         if self.current_cat == "Сортировки":
             self.p1_sort = val
+        elif self.current_cat == "Массивы":
+            self.p1_arrays = val
         elif self.current_cat == "Поиск":
             self.p1_search = val
         else:
@@ -122,13 +131,17 @@ class Algoss(App):
 
     @property
     def current_p2(self) -> str:
-        if self.current_cat == "Поиск":
+        if self.current_cat == "Массивы":
+            return self.p2_arrays
+        elif self.current_cat == "Поиск":
             return self.p2_search
         return self.p2_greedy
 
     @current_p2.setter
     def current_p2(self, val: str):
-        if self.current_cat == "Поиск":
+        if self.current_cat == "Массивы":
+            self.p2_arrays = val
+        elif self.current_cat == "Поиск":
             self.p2_search = val
         else:
             self.p2_greedy = val
@@ -177,6 +190,19 @@ class Algoss(App):
             inp_p1.value = self.p1_sort
             lbl_p2.display = False
             inp_p2.display = False
+        elif self.current_cat == "Массивы":
+            if self.current_algo == "Два указателя":
+                lbl_p1.update("Массив:")
+                inp_p1.value = self.p1_arrays
+                lbl_p2.update("Цель:")
+                inp_p2.value = self.p2_arrays
+            else:
+                lbl_p1.update("Массив:")
+                inp_p1.value = self.p1_arrays
+                lbl_p2.update("Отрезок:")
+                inp_p2.value = self.p2_arrays
+            lbl_p2.display = True
+            inp_p2.display = True
         elif self.current_cat == "Поиск":
             lbl_p1.update("Массив:")
             inp_p1.value = self.p1_search
@@ -210,6 +236,7 @@ class Algoss(App):
             self.current_algo = name
             self.query_one(AlgoList).current = name
             self.query_one(AlgoList).refresh()
+            self.update_numbers_ui()
             self.load()
 
     def build_generator(self):
@@ -226,12 +253,14 @@ class Algoss(App):
                 return selection(arr)
             elif name == "Вставками":
                 return insertion(arr)
-            elif name == "Быстрая (Quick)":
-                return quicksort(arr)
-            elif name == "Слиянием (Merge)":
-                return mergesort(arr)
-            elif name == "Шейкерная (Cocktail)":
-                return shaker(arr)
+        elif cat == "Массивы":
+            if name == "Два указателя":
+                arr = parse_ints(p1, DEFAULT_TWO_POINTERS)
+                target = parse_ints(p2, [26])[0]
+                return two_pointers(arr, target)
+            elif name == "Префиксные суммы":
+                arr = parse_ints(p1, DEFAULT_PREFIX)
+                return prefix_sums(arr, p2)
         elif cat == "Поиск":
             arr = parse_ints(p1, DEFAULT_SEARCH)
             target = parse_ints(p2, [23])[0]
@@ -338,9 +367,13 @@ class Algoss(App):
 
     def action_cat_2(self):
         if self.mode != "INSERT":
-            self.set_category("Поиск")
+            self.set_category("Массивы")
 
     def action_cat_3(self):
+        if self.mode != "INSERT":
+            self.set_category("Поиск")
+
+    def action_cat_4(self):
         if self.mode != "INSERT":
             self.set_category("Жадные")
 
@@ -379,7 +412,7 @@ class Algoss(App):
 
     def apply_inputs(self):
         self.current_p1 = self.query_one("#input_p1", Input).value
-        if self.current_cat in ("Поиск", "Жадные"):
+        if self.current_cat in ("Массивы", "Поиск", "Жадные"):
             self.current_p2 = self.query_one("#input_p2", Input).value
         self.mode = "NORMAL"
         self.set_focus(None)
@@ -404,6 +437,24 @@ class Algoss(App):
             count = random.randint(7, 12)
             vals = [random.randint(1, 30) for _ in range(count)]
             self.p1_sort = ", ".join(map(str, vals))
+        elif self.current_cat == "Массивы":
+            if self.current_algo == "Два указателя":
+                count = random.randint(7, 10)
+                vals = sorted(random.sample(range(1, 40), count))
+                if random.random() < 0.75:
+                    i, j = random.sample(range(count), 2)
+                    target = vals[i] + vals[j]
+                else:
+                    target = random.randint(10, 70)
+                self.p1_arrays = ", ".join(map(str, vals))
+                self.p2_arrays = str(target)
+            else:
+                count = random.randint(6, 9)
+                vals = [random.randint(1, 9) for _ in range(count)]
+                ql = random.randint(0, count - 3)
+                qr = random.randint(ql + 1, count - 1)
+                self.p1_arrays = ", ".join(map(str, vals))
+                self.p2_arrays = f"{ql} {qr}"
         elif self.current_cat == "Поиск":
             count = random.randint(8, 12)
             vals = sorted(random.sample(range(1, 60), count))
