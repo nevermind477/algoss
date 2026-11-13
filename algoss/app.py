@@ -38,11 +38,13 @@ CATEGORIES = {
 }
 
 LOGO_TEXT = (
-    "┌────────────────────────────────────┐\n"
-    "│  █▀▀█ █    █▀▀█ █▀▀█ █▀▀▀ █▀▀▀     │\n"
-    "│  █▄▄█ █    █ ▄█ █  █ ▀▀▀█ ▀▀▀█     │\n"
-    "│  ▀  ▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀     │\n"
-    "└────────────────────────────────────┘"
+    "┌───────────────────────────────────────┐\n"
+    "│     _    _     ____  ___  ____ ____   │\n"
+    "│    / \\  | |   / ___|/ _ \\/ ___/ ___|  │\n"
+    "│   / _ \\ | |  | |  _| | | \\___ \\___ \\  │\n"
+    "│  / ___ \\| |__| |_| | |_| |___) |__) | │\n"
+    "│ /_/   \\_\\_____\\____|\\___/|____/____/  │\n"
+    "└───────────────────────────────────────┘"
 )
 
 
@@ -80,9 +82,9 @@ class Algoss(App):
 
                 yield Label("┌─ КАТЕГОРИЯ", classes="sec_title")
                 with Horizontal(id="cat_bar"):
-                    yield Button("Сортировка", id="cat_sort", classes="cat_btn -active")
-                    yield Button("Поиск", id="cat_search", classes="cat_btn")
-                    yield Button("Жадные", id="cat_greedy", classes="cat_btn")
+                    yield Button("⟦ СОРТ ⟧", id="cat_sort", classes="cat_btn -active")
+                    yield Button("[ ПОИСК ]", id="cat_search", classes="cat_btn")
+                    yield Button("[ ЖАДНЫЕ ]", id="cat_greedy", classes="cat_btn")
 
                 yield Label("┌─ ВЫБОР АЛГОРИТМА", classes="sec_title")
                 yield OptionList(*CATEGORIES["Сортировки"], id="algo_list")
@@ -94,14 +96,14 @@ class Algoss(App):
                 yield Input("23", id="p2")
 
                 with Horizontal(id="param_actions"):
-                    yield Button("🎲 Случайно", id="btn_rand")
-                    yield Button("↵ Применить", id="btn_apply")
+                    yield Button("[ 🎲 ]  Случайно", id="btn_rand", classes="btn_action")
+                    yield Button("[ ↵ ]  Применить", id="btn_apply", classes="btn_action")
 
                 yield Label("┌─ УПРАВЛЕНИЕ", classes="sec_title")
-                yield Button("▶ Старт", id="play")
+                yield Button("⟦ ▶ ⟧  СТАРТ  <space>", id="play", classes="btn_primary")
                 with Horizontal(id="step_actions"):
-                    yield Button("⏭ Шаг", id="step")
-                    yield Button("↺ Сброс", id="reset")
+                    yield Button("[ ⏭ ]  Шаг  <→>", id="step", classes="btn_action")
+                    yield Button("[ ↺ ]  Сброс  <r>", id="reset", classes="btn_action")
 
                 yield Label("┌─ СКОРОСТЬ", classes="sec_title")
                 yield SpeedBar(50, id="speed")
@@ -122,18 +124,31 @@ class Algoss(App):
         if cat == self.current_cat:
             return
         self.current_cat = cat
-        for btn in self.query(".cat_btn"):
-            btn.remove_class("-active")
+
+        btn_sort = self.query_one("#cat_sort", Button)
+        btn_search = self.query_one("#cat_search", Button)
+        btn_greedy = self.query_one("#cat_greedy", Button)
+
+        btn_sort.remove_class("-active")
+        btn_search.remove_class("-active")
+        btn_greedy.remove_class("-active")
+
+        btn_sort.label = "[ СОРТ ]"
+        btn_search.label = "[ ПОИСК ]"
+        btn_greedy.label = "[ ЖАДНЫЕ ]"
 
         if cat == "Сортировки":
-            self.query_one("#cat_sort", Button).add_class("-active")
+            btn_sort.add_class("-active")
+            btn_sort.label = "⟦ СОРТ ⟧"
             self.query_one("#p1", Input).value = ", ".join(map(str, DEFAULT_SORT))
         elif cat == "Поиск":
-            self.query_one("#cat_search", Button).add_class("-active")
+            btn_search.add_class("-active")
+            btn_search.label = "⟦ ПОИСК ⟧"
             self.query_one("#p1", Input).value = ", ".join(map(str, DEFAULT_SEARCH))
             self.query_one("#p2", Input).value = "23"
         else:
-            self.query_one("#cat_greedy", Button).add_class("-active")
+            btn_greedy.add_class("-active")
+            btn_greedy.label = "⟦ ЖАДНЫЕ ⟧"
             self.query_one("#p1", Input).value = "137"
             self.query_one("#p2", Input).value = ", ".join(map(str, DEFAULT_COINS))
 
@@ -231,7 +246,7 @@ class Algoss(App):
     def set_playing(self, playing: bool):
         self.playing = playing
         btn = self.query_one("#play", Button)
-        btn.label = "⏸ Пауза" if playing else "▶ Старт"
+        btn.label = "⟦ ⏸ ⟧  ПАУЗА  <space>" if playing else "⟦ ▶ ⟧  СТАРТ  <space>"
         if self.timer:
             self.timer.stop()
             self.timer = None
