@@ -53,9 +53,20 @@ def test_app_vim_navigation():
     async def run():
         app = Algoss()
         async with app.run_test(size=(80, 24)) as pilot:
-            # 1. Test step with 'n'
+            # 1. Test step with 'n', 'p', 'right', 'left'
             assert app.steps == 1
             await pilot.press("n")
+            assert app.steps == 2
+            await pilot.press("n")
+            assert app.steps == 3
+            # Rewind with 'left'
+            await pilot.press("left")
+            assert app.steps == 2
+            # Advance with 'right'
+            await pilot.press("right")
+            assert app.steps == 3
+            # Rewind with 'p'
+            await pilot.press("p")
             assert app.steps == 2
 
             # 2. Test play / pause with 'space'

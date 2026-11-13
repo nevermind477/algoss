@@ -63,15 +63,16 @@ class Algoss(App):
     AUTO_FOCUS = None
     BINDINGS = [
         ("space", "toggle", "старт/пауза"),
-        ("n", "step", "шаг"),
-        ("right", "step", "шаг"),
+        ("left", "handle_left", "назад / пред. режим"),
+        ("right", "handle_right", "вперед / след. режим"),
+        ("n", "step_forward", "шаг вперед"),
+        ("p", "step_backward", "шаг назад"),
         ("r", "reset", "сброс"),
         ("j", "next_algo", "след. алгоритм"),
         ("down", "next_algo", "след. алгоритм"),
         ("k", "prev_algo", "пред. алгоритм"),
         ("up", "prev_algo", "пред. алгоритм"),
         ("h", "prev_cat", "пред. режим"),
-        ("left", "prev_cat", "пред. режим"),
         ("l", "next_cat", "след. режим"),
         ("1", "cat_1", "режим 1"),
         ("2", "cat_2", "режим 2"),
@@ -96,6 +97,9 @@ class Algoss(App):
         self.steps = 0
         self.speed = 50
         self.mode = "NORMAL"
+
+        self.history = []
+        self.history_idx = -1
 
         self.current_cat = "Сортировки"
         self.current_algo = "Пузырьковая"
@@ -149,7 +153,7 @@ class Algoss(App):
     def compose(self) -> ComposeResult:
         with Horizontal(id="body"):
             with Vertical(id="side"):
-                yield LogoView(id="logo")
+                yield LogoView(current_cat=self.current_cat, id="logo")
                 yield CategoryBar(list(CATEGORIES.keys()), self.current_cat, id="cat_bar")
                 yield AlgoList(CATEGORIES[self.current_cat], self.current_algo, id="algo_list")
                 yield VimKeymap(self.speed, self.playing, id="keymap")
@@ -222,6 +226,7 @@ class Algoss(App):
         if cat not in CATEGORIES or cat == self.current_cat:
             return
         self.current_cat = cat
+        self.query_one(LogoView).set_category(cat)
         self.query_one(CategoryBar).current = cat
         self.query_one(CategoryBar).refresh()
 
@@ -278,27 +283,55 @@ class Algoss(App):
     def load(self):
         self.stop_playing()
         self.gen = self.build_generator()
+        self.history = []
+        self.history_idx = -1
         self.steps = 0
         self.query_one(TraceView).clear()
         self.query_one(Canvas).show(None)
         self.query_one(StateCard).update_state(None, 0)
-        self.advance()
+        self.step_forward()
         self.update_status()
 
-    def advance(self):
+    def step_forward(self):
+        if self.mode == "INSERT":
+            return
+        if self.history_idx < len(self.history) - 1:
+            self.history_idx += 1
+            step = self.history[self.history_idx]
+            self.steps = self.history_idx + 1
+            self.apply_step(step)
+            return
+
         if self.gen is None:
             return
+
         try:
             step = next(self.gen)
+            self.history.append(step)
+            self.history_idx = len(self.history) - 1
+            self.steps = self.history_idx + 1
+            self.apply_step(step)
         except StopIteration:
             self.gen = None
             self.stop_playing()
             self.update_status()
+
+    def step_backward(self):
+        if self.mode == "INSERT":
             return
-        self.steps += 1
+        if self.history_idx > 0:
+            self.history_idx -= 1
+            self.steps = self.history_idx + 1
+            step = self.history[self.history_idx]
+            self.apply_step(step)
+            if self.playing:
+                self.stop_playing()
+
+    def apply_step(self, step):
         self.query_one(Canvas).show(step)
         self.query_one(StateCard).update_state(step, self.steps)
-        self.query_one(TraceView).add(self.steps, step.message)
+        trace_data = [(i + 1, s.message) for i, s in enumerate(self.history[: self.history_idx + 1])]
+        self.query_one(TraceView).set_history(trace_data, self.history_idx)
         self.update_status()
 
     def delay(self):
@@ -314,7 +347,7 @@ class Algoss(App):
             self.timer.stop()
             self.timer = None
         if playing:
-            self.timer = self.set_interval(self.delay(), self.advance)
+            self.timer = self.set_interval(self.delay(), self.step_forward)
 
     def stop_playing(self):
         self.set_playing(False)
@@ -326,15 +359,37 @@ class Algoss(App):
     def action_toggle(self):
         if self.mode == "INSERT":
             return
-        if self.gen is None:
+        if self.gen is None and self.history_idx >= len(self.history) - 1:
             self.load()
         self.set_playing(not self.playing)
 
-    def action_step(self):
+    def action_handle_left(self):
+        if self.mode == "INSERT":
+            return
+        if self.playing or self.history_idx > 0:
+            self.step_backward()
+        else:
+            self.action_prev_cat()
+
+    def action_handle_right(self):
+        if self.mode == "INSERT":
+            return
+        if self.playing or self.history_idx > 0:
+            self.step_forward()
+        else:
+            self.action_next_cat()
+
+    def action_step_forward(self):
         if self.mode == "INSERT":
             return
         self.stop_playing()
-        self.advance()
+        self.step_forward()
+
+    def action_step_backward(self):
+        if self.mode == "INSERT":
+            return
+        self.stop_playing()
+        self.step_backward()
 
     def action_reset(self):
         if self.mode == "INSERT":
@@ -478,8 +533,10 @@ class Algoss(App):
         act = event.act
         if act == "toggle":
             self.action_toggle()
-        elif act == "step":
-            self.action_step()
+        elif act == "step_forward":
+            self.action_step_forward()
+        elif act == "step_backward":
+            self.action_step_backward()
         elif act == "reset":
             self.action_reset()
         elif act == "next_algo":

@@ -19,26 +19,44 @@ def box_bot(width: int) -> str:
 
 
 class LogoView(Widget):
+    def __init__(self, current_cat: str = "Сортировки", **kwargs):
+        super().__init__(**kwargs)
+        self.current_cat = current_cat
+
+    def set_category(self, cat: str):
+        self.current_cat = cat
+        self.refresh()
+
     def render(self):
         width = max(self.size.width, 24)
         out = Text()
 
-        if width >= 36:
-            lines = [
-                "  ___   _    ___  ___  ___ ___  ",
-                " / _ \\ | |  / _ \\/ _ \\/ __/ __| ",
-                "/ ___ \\| |__\\ (_) \\ (_) \\__ \\__ \\",
-                "/_/   \\_\\_____\\___/ \\___/|___/___/",
-            ]
-        else:
-            lines = [
-                "█▀█ █ █▀▀ █▀█ █▀▀ █▀▀",
-                "█▀█ █ █ █ █ █ ▀▀█ ▀▀█",
-                "▀ ▀ ▀ ▀▀▀ ▀▀▀ ▀▀▀ ▀▀▀",
-            ]
+        banners = {
+            "Сортировки": [
+                "█▀▀ █▀█ █▀█ ▀█▀",
+                "▄▄█ █▄█ █▀▄  █ ",
+                "  СОРТИРОВКИ   ",
+            ],
+            "Массивы": [
+                "█▀█ █▀█ █▀█ █▀█ █ █",
+                "█▀█ █▀▄ █▀▄ █▀█ ▀█▀",
+                "     МАССИВЫ       ",
+            ],
+            "Поиск": [
+                "█▀▀ █▀▀ █▀█ █▀█ █▀▀ █ █",
+                "▄▄█ ██▄ █▀█ █▀▄ █▄▄ █▀█",
+                "         ПОИСК          ",
+            ],
+            "Жадные": [
+                "█▀▀ █▀█ █▀▀ █▀▀ █▀▄ █ █",
+                "█ █ █▀▄ ██▄ ██▄ █▄▀ ▀█▀",
+                "    ЖАДНЫЙ АЛГОРИТМ    ",
+            ],
+        }
 
+        lines = banners.get(self.current_cat, banners["Сортировки"])
         inner = width - 2
-        out.append(box_top("ALGOSS", width), style=DARK_GRAY)
+        out.append(box_top(self.current_cat.upper(), width), style=DARK_GRAY)
 
         for l in lines:
             if len(l) > inner:
@@ -84,24 +102,29 @@ class CategoryBar(Widget):
     def render(self):
         width = max(self.size.width, 24)
         out = Text()
-        out.append(box_top("РЕЖИМ [h/l или 1-3]", width), style=DARK_GRAY)
+        out.append(box_top("РЕЖИМЫ [1-4 или ←/→]", width), style=DARK_GRAY)
 
         inner = width - 2
         row = Text()
-        row.append(" ")
+        row.append(" ◄  ", style=GRAY)
         for idx, cat in enumerate(self.categories, start=1):
             is_active = (cat == self.current)
-            sname = "Сорт" if cat == "Сортировки" else ("Жадн" if width < 36 and cat == "Жадные" else cat)
             if is_active:
-                row.append(f"[{idx}:{sname}]", style=f"bold #000000 on {WHITE}")
+                row.append(f"[{idx}]", style=f"bold #000000 on {WHITE}")
             else:
-                row.append(f" {idx}:{sname} ", style=GRAY)
-            row.append(" ")
+                row.append(f" {idx} ", style=GRAY)
+            row.append("  ")
+        row.append("►", style=GRAY)
 
         if len(row.plain) > inner:
             row = row[:inner]
         else:
-            row.append(" " * (inner - len(row.plain)))
+            pad = (inner - len(row.plain)) // 2
+            padded = Text()
+            padded.append(" " * pad)
+            padded.append_text(row)
+            padded.append(" " * (inner - len(row.plain) - pad))
+            row = padded
 
         out.append("│", style=DARK_GRAY)
         out.append_text(row)
@@ -114,8 +137,8 @@ class CategoryBar(Widget):
         n = len(self.categories)
         if n == 0:
             return
-        zone_width = max(1, (self.size.width - 2) // n)
-        idx = min(max(0, (x - 1) // zone_width), n - 1)
+        zone = max(1, (self.size.width - 2) // n)
+        idx = min(max(0, (x - 1) // zone), n - 1)
         self.set_current(self.categories[idx])
 
 
@@ -214,8 +237,8 @@ class VimKeymap(Widget):
         play_label = "пауза" if self.playing else "старт"
         lines = [
             f"<space>  {play_label}",
-            "n        шаг вперед",
-            "r        сброс к началу",
+            "→ / n    шаг вперед",
+            "← / p    шаг назад (отмотка)",
             "j / k    выбор алгоритма",
             "h / l    смена режима (1-4)",
             "i        настройка чисел",
@@ -237,8 +260,8 @@ class VimKeymap(Widget):
         y = event.offset.y
         actions = [
             "toggle",
-            "step",
-            "reset",
+            "step_forward",
+            "step_backward",
             "next_algo",
             "next_cat",
             "edit",
@@ -280,7 +303,7 @@ class VimStatusBar(Widget):
             out.append(" NORMAL ", style=f"bold #000000 on {WHITE}")
             out.append(f" {self.cat} ▸ {self.algo} │ шаг {self.step_num}   ", style=f"{WHITE} on {DARK_GRAY}")
 
-        hint = " <space> старт  n шаг  r сброс  i ввод  g rand  q выход "
+        hint = " <space> старт  ←/→ шаг  h/l режим  i ввод  q выход "
         used = len(out.plain)
         rem = max(0, width - used - len(hint))
         out.append(" " * rem, style=f"on {DARK_GRAY}")
@@ -377,17 +400,17 @@ class TraceView(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.history: list[tuple[int, str]] = []
+        self.active_idx: int = -1
 
     def clear(self):
         self.history.clear()
+        self.active_idx = -1
         self.refresh()
 
-    def add(self, step_num: int, message: str):
-        if not self.history or self.history[-1] != (step_num, message):
-            self.history.append((step_num, message))
-            if len(self.history) > 60:
-                self.history.pop(0)
-            self.refresh()
+    def set_history(self, history: list[tuple[int, str]], active_idx: int):
+        self.history = history
+        self.active_idx = active_idx
+        self.refresh()
 
     def render(self):
         width = max(self.size.width, 20)
@@ -403,16 +426,16 @@ class TraceView(Widget):
             out.append(f"│{' ' * (width - 2)}│\n", style=DARK_GRAY)
 
         for idx, (s_num, msg) in enumerate(items):
-            is_last = (idx == len(items) - 1)
-            marker = "▶" if is_last else " "
+            is_current = (s_num == self.active_idx + 1)
+            marker = "▶" if is_current else " "
             prefix = f" {marker} #{s_num:<3} │ "
             content_w = width - 2 - len(prefix)
             line = msg[:content_w] if len(msg) > content_w else msg
             tail = " " * max(0, content_w - len(line))
 
             out.append("│", style=DARK_GRAY)
-            out.append(prefix, style=f"bold {WHITE}" if is_last else DARK_GRAY)
-            out.append(line, style=f"bold {WHITE}" if is_last else GRAY)
+            out.append(prefix, style=f"bold {WHITE}" if is_current else DARK_GRAY)
+            out.append(line, style=f"bold {WHITE}" if is_current else GRAY)
             out.append(tail)
             out.append("│\n", style=DARK_GRAY)
 
