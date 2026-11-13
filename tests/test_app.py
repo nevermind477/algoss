@@ -2,7 +2,6 @@ import asyncio
 
 from algoss.algorithms import (
     DEFAULT_COINS,
-    DEFAULT_SORT,
     binary_search,
     bubble,
     coin_change,
@@ -41,37 +40,75 @@ def test_coins():
     assert sum(steps[-1].array) == 137
 
 
-def test_app():
+def test_app_vim_navigation():
     async def run():
         app = Algoss()
-        async with app.run_test(size=(110, 45)) as pilot:
-            await pilot.press("right")
-            await pilot.press("right")
+        async with app.run_test(size=(80, 24)) as pilot:
+            # 1. Test step with 'n'
+            assert app.steps == 1
+            await pilot.press("n")
+            assert app.steps == 2
+            await pilot.press("n")
+            assert app.steps == 3
+
+            # 2. Test play / pause with 'space'
             await pilot.press("space")
-            await pilot.pause(0.1)
+            assert app.playing
+            await pilot.pause(0.05)
             await pilot.press("space")
             assert not app.playing
 
-            await pilot.click("#cat_search")
-            await pilot.pause()
-            assert app.current_algo == "Бинарный поиск"
-
-            await pilot.click("#btn_rand")
-            await pilot.pause()
-            assert app.steps == 1
-
-            app.query_one("#p2").value = "999"
-            await pilot.click("#btn_apply")
-            await pilot.pause()
-            assert app.steps == 1
-
-            await pilot.click("#cat_greedy")
-            await pilot.pause()
-            assert app.current_algo == "Размен монет"
-            await pilot.click("#step")
-            assert app.steps == 2
-
+            # 3. Test reset with 'r'
             await pilot.press("r")
             assert app.steps == 1
+
+            # 4. Test algorithm navigation with 'j' and 'k'
+            assert app.current_algo == "Пузырьковая"
+            await pilot.press("j")
+            assert app.current_algo == "Выбором"
+            await pilot.press("j")
+            assert app.current_algo == "Вставками"
+            await pilot.press("k")
+            assert app.current_algo == "Выбором"
+
+            # 5. Test category switching with 'l' and 'h'
+            assert app.current_cat == "Сортировки"
+            await pilot.press("l")
+            assert app.current_cat == "Поиск"
+            assert app.current_algo == "Бинарный поиск"
+            await pilot.press("l")
+            assert app.current_cat == "Жадные"
+            assert app.current_algo == "Размен монет"
+            await pilot.press("h")
+            assert app.current_cat == "Поиск"
+
+            # 6. Test direct category keys '1', '2', '3'
+            await pilot.press("1")
+            assert app.current_cat == "Сортировки"
+            await pilot.press("3")
+            assert app.current_cat == "Жадные"
+            await pilot.press("2")
+            assert app.current_cat == "Поиск"
+
+            # 7. Test randomize with 'g'
+            old_p1 = app.current_p1
+            await pilot.press("g")
+            assert app.steps == 1
+
+            # 8. Test edit mode with 'i' and input submit
+            await pilot.press("i")
+            assert app.mode == "INSERT"
+            inp1 = app.query_one("#input_p1")
+            inp1.value = "10, 20, 30, 40"
+            await pilot.press("enter")
+            assert app.mode == "NORMAL"
+            assert "10" in app.current_p1
+
+            # 9. Test speed change with '+' and '-'
+            old_speed = app.speed
+            await pilot.press("plus")
+            assert app.speed == old_speed + 10
+            await pilot.press("minus")
+            assert app.speed == old_speed
 
     asyncio.run(run())
