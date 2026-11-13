@@ -1,0 +1,56 @@
+Screen {
+    background: #0f1216;
+    color: #c9d1d9;
+}
+
+#body {
+    height: 1fr;
+}
+
+#side {
+    width: 30;
+    padding: 1 1 0 1;
+    background: #151a21;
+    border-right: solid #232a34;
+}
+
+#main {
+    width: 1fr;
+}
+
+.cap {
+    color: #6c7684;
+    margin-top: 1;
+}
+
+#side Select {
+    width: 100%;
+}
+
+#side Button {
+    width: 100%;
+    margin-top: 1;
+}
+
+#speed {
+    height: 1;
+    width: 1fr;
+}
+
+#canvas {
+    height: 1fr;
+    padding: 1 2;
+}
+
+#info {
+    height: auto;
+    min-height: 3;
+    padding: 1 2;
+    background: #151a21;
+    border-top: solid #232a34;
+}
+
+Footer {
+    background: #151a21;
+    color: #6c7684;
+}
