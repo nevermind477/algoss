@@ -1,9 +1,32 @@
 [project]
 name = "algoss"
 version = "0.1.0"
-description = "Пошаговый визуализатор алгоритмов в терминале"
+description = "Пошаговый терминальный TUI-визуализатор алгоритмов в стиле Vim"
+readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "nevermind477" }]
+keywords = ["algorithms", "visualization", "tui", "textual", "vim", "terminal"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Education",
+    "Topic :: Software Development :: Libraries",
+]
 dependencies = ["textual>=8.2"]
+
+[project.urls]
+Homepage = "https://github.com/nevermind477/algoss"
+Repository = "https://github.com/nevermind477/algoss"
+Issues = "https://github.com/nevermind477/algoss/issues"
 
 [dependency-groups]
 dev = ["pytest>=8"]
